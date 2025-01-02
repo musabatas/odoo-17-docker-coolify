@@ -4,27 +4,21 @@ services:
     image: postgres:16
     user: root
     environment:
-      - POSTGRES_USER=${SERVICE_USER_POSTGRESQL}
-      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRESQL}
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=te1uwNusH6QkPAIyXa
       - POSTGRES_DB=postgres
     restart: always             # run as a service
     volumes:
       - type: bind
         source: ./postgresql
         target: /var/lib/postgresql/data
-        is_directory: true
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 20s
-      retries: 10
+        is_directory: true    # Coolify will create this directory
 
   odoo17:
     image: odoo:17
     user: root
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     ports:
       - "10017:8069"
       - "20017:8072" # live chat
@@ -32,47 +26,49 @@ services:
     command: --
     environment:
       - HOST=db
-      - USER=${SERVICE_USER_POSTGRESQL}
-      - PASSWORD=${SERVICE_PASSWORD_POSTGRESQL}
-      # Odoo web interface URL with port
-      - SERVICE_FQDN_ODOO_8069
-      # Live chat URL with port and path
-      - SERVICE_FQDN_CHAT_8072=/longpolling
-      # Admin password for Odoo
-      - ADMIN_PASSWORD=${SERVICE_PASSWORD_ODOO}
+      - USER=odoo
+      - PASSWORD=te1uwNusH6QkPAIyXa
     volumes:
+      - type: bind
+        source: ./addons
+        target: /mnt/extra-addons
+        is_directory: true    # Coolify will create this directory
+      - type: bind
+        source: ./etc
+        target: /etc/odoo
+        is_directory: true    # Coolify will create this directory
+      - type: bind
+        source: ./etc/odoo.conf
+        target: /etc/odoo/odoo.conf
+        content: |
+          [options]
+          addons_path = /mnt/extra-addons
+          data_dir = /etc/odoo
+          admin_passwd = 1ALxKjvgTETvpJL3gL
+          logfile = /etc/odoo/odoo-server.log
+          dev_mode = reload
       - type: bind
         source: ./entrypoint.sh
         target: /entrypoint.sh
         content: |
           #!/bin/bash
-          
           set -e
-          
+
           # Install system dependencies
           apt-get update
           apt-get install -y build-essential python3-dev libldap2-dev libsasl2-dev libssl-dev
-          
+
           # set the postgres database host, port, user and password according to the environment
           # and pass them as arguments to the odoo process if not present in the config file
           : ${HOST:=${DB_PORT_5432_TCP_ADDR:='db'}}
           : ${PORT:=${DB_PORT_5432_TCP_PORT:=5432}}
-          : ${USER:=${DB_ENV_POSTGRES_USER:=${POSTGRES_USER:=${SERVICE_USER_POSTGRESQL}}}}
-          : ${PASSWORD:=${DB_ENV_POSTGRES_PASSWORD:=${POSTGRES_PASSWORD:=${SERVICE_PASSWORD_POSTGRESQL}}}}
-          
-          # Update Odoo config with admin password
-          if [ -n "$ADMIN_PASSWORD" ]; then
-              sed -i "s/admin_passwd = .*/admin_passwd = $ADMIN_PASSWORD/" /etc/odoo/odoo.conf
-          fi
-          
-          # Clean apt cache to reduce image size
-          apt-get clean
-          rm -rf /var/lib/apt/lists/*
-          
+          : ${USER:=${DB_ENV_POSTGRES_USER:=${POSTGRES_USER:='odoo'}}}
+          : ${PASSWORD:=${DB_ENV_POSTGRES_PASSWORD:=${POSTGRES_PASSWORD:='te1uwNusH6QkPAIyXa'}}}
+
           # install python packages
           pip3 install pip --upgrade
           pip3 install -r /etc/odoo/requirements.txt
-          
+
           DB_ARGS=()
           function check_config() {
               param="$1"
@@ -87,7 +83,7 @@ services:
           check_config "db_port" "$PORT"
           check_config "db_user" "$USER"
           check_config "db_password" "$PASSWORD"
-          
+
           case "$1" in
               -- | odoo)
                   shift
@@ -105,32 +101,24 @@ services:
               *)
                   exec "$@"
           esac
-          
-          exit 1
-      - type: bind
-        source: ./addons
-        target: /mnt/extra-addons
-        is_directory: true
-      - type: bind
-        source: ./etc
-        target: /etc/odoo
-        is_directory: true
-      - type: bind
-        source: ./etc/odoo.conf
-        target: /etc/odoo/odoo.conf
-        content: |
-          [options]
-          addons_path = /mnt/extra-addons
-          data_dir = /etc/odoo
-          admin_passwd = ${SERVICE_PASSWORD_ODOO}
       - type: bind
         source: ./etc/requirements.txt
         target: /etc/odoo/requirements.txt
         content: |
-          # Official Odoo 17 Python Package Requirements
-          # Based on Ubuntu 22.04 and Debian 11 python3-* equivalents
-          
-          Babel==2.9.1
+          # -----------------------
+          # | Add Python packages |
+          # -----------------------
+          # To install below packages at startup, uncomment this line in "docker-compose.yml" file!
+          # - ./entrypoint.sh:/entrypoint.sh
+          # then down the docker container ($ docker-compose down) and up it again ($ docker-compose up -d).
+          # -----------------------
+          paramiko==2.7.2 # for auto_backup module
+          pycryptodome==3.20.0
+
+
+          # The officially supported versions of the following packages are their
+          # python3-* equivalent distributed in Ubuntu 22.04 and Debian 11
+          Babel==2.9.1  # min version = 2.6.0 (Focal with security backports)
           chardet==4.0.0
           cryptography==3.4.8
           decorator==4.4.2
@@ -138,11 +126,11 @@ services:
           ebaysdk==2.1.5
           freezegun==1.1.0
           geoip2==2.9.0
-          gevent==21.8.0 ; python_version == '3.10'
+          gevent==21.8.0 ; python_version == '3.10'  # (Jammy)
           gevent==22.10.2; python_version > '3.10'
-          greenlet==1.1.2 ; python_version == '3.10'
+          greenlet==1.1.2 ; python_version == '3.10'  # (Jammy)
           greenlet==2.0.2 ; python_version > '3.10'
-          idna==2.10
+          idna==2.10  # requests 2.25.1 depends on idna<3 and >=2.5
           Jinja2==3.0.3 ; python_version <= '3.10'
           Jinja2==3.1.2 ; python_version > '3.10'
           libsass==0.20.1
@@ -152,12 +140,12 @@ services:
           MarkupSafe==2.1.2 ; python_version > '3.10'
           num2words==0.5.10
           ofxparse==0.21
-          passlib==1.7.4
-          Pillow==9.0.1 ; python_version <= '3.10'
+          passlib==1.7.4 # min version = 1.7.2 (Focal with security backports)
+          Pillow==9.0.1 ; python_version <= '3.10'  # min version = 7.0.0 (Focal with security backports)
           Pillow==9.4.0 ; python_version > '3.10'
           polib==1.1.1
-          psutil==5.9.0 ; python_version <= '3.10'
-          psutil==5.9.4 ; python_version > '3.10'
+          psutil==5.9.0 ; python_version <= '3.10' 
+          psutil==5.9.4 ; python_version > '3.10' 
           psycopg2==2.9.2 ; sys_platform != 'win32' and python_version <= '3.10'
           psycopg2==2.9.5 ; python_version > '3.10' or sys_platform == 'win32'
           pydot==1.4.2
@@ -167,25 +155,21 @@ services:
           pypiwin32 ; sys_platform == 'win32'
           pyserial==3.5
           python-dateutil==2.8.1
-          python-ldap==3.4.0 ; sys_platform != 'win32'
+          python-ldap==3.4.0 ; sys_platform != 'win32'  # min version = 3.2.0 (Focal with security backports)
           python-stdnum==1.17
-          pytz
+          pytz  # no version pinning to avoid OS perturbations
           pyusb==1.2.1
           qrcode==7.3.1
           reportlab==3.6.8 ; python_version <= '3.10'
           reportlab==3.6.12 ; python_version > '3.10'
-          requests==2.25.1
+          requests==2.25.1 # versions < 2.25 aren't compatible w/ urllib3 1.26. Bullseye = 2.25.1. min version = 2.22.0 (Focal)
           rjsmin==1.1.0
-          urllib3==1.26.5
+          urllib3==1.26.5 # indirect / min version = 1.25.8 (Focal with security backports)
           vobject==0.9.6.1
           Werkzeug==2.0.2
           xlrd==1.2.0
           XlsxWriter==3.0.2
           xlwt==1.3.*
           zeep==4.1.0
-
-          # Additional Python Packages
-          pycryptodome==3.20.0
-          paramiko==2.12.0
     restart: always             # run as a service
     
