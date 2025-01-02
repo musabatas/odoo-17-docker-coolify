@@ -1,0 +1,34 @@
+version: '2'
+services:
+  odoo-db:
+    image: postgres:16
+    user: root
+    environment:
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - POSTGRES_DB=postgres
+    restart: always             # run as a service
+    volumes:
+        - ./postgresql:/var/lib/postgresql/data
+
+  odoo17:
+    image: odoo:17
+    user: root
+    depends_on:
+      - odoo-db
+    tty: true
+    command: --
+    environment:
+      - HOST=odoo-db
+      - USER=${SERVICE_USER_POSTGRES}
+      - PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      # Generate FQDN for Odoo web interface
+      - SERVICE_FQDN_ODOO_8069
+      # Generate FQDN for live chat
+      - SERVICE_FQDN_CHAT_8072
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh
+      - ./addons:/mnt/extra-addons
+      - ./etc:/etc/odoo
+    restart: always             # run as a service
+    
