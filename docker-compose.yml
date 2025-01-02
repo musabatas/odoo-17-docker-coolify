@@ -4,8 +4,8 @@ services:
     image: postgres:16
     user: root
     environment:
-      - POSTGRES_USER=${SERVICE_USER_POSTGRES:-odoo}
-      - POSTGRES_PASSWORD=${SERVICE_SPECIFIC_PASSWORD:-${SERVICE_PASSWORD_POSTGRES}}
+      - POSTGRES_USER=${SERVICE_USER_DB}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_DB}
       - POSTGRES_DB=postgres
     restart: always             # run as a service
     volumes:
@@ -26,14 +26,14 @@ services:
     command: --
     environment:
       - HOST=db
-      - USER=${SERVICE_USER_POSTGRES:-odoo}
-      - PASSWORD=${SERVICE_SPECIFIC_PASSWORD:-${SERVICE_PASSWORD_POSTGRES}}
-      # Odoo web interface URL
+      - USER=${SERVICE_USER_DB}
+      - PASSWORD=${SERVICE_PASSWORD_DB}
+      # Odoo web interface URL with port
       - SERVICE_FQDN_ODOO_8069
-      # Live chat URL
+      # Live chat URL with port and path
       - SERVICE_FQDN_CHAT_8072=/longpolling
-      # Admin password for Odoo
-      - ADMIN_PASSWORD=${SERVICE_SPECIFIC_PASSWORD_ADMIN:-${SERVICE_PASSWORD_ODOO}}
+      # Admin password for Odoo (separate from DB password)
+      - ADMIN_PASSWORD=${SERVICE_PASSWORD_ADMIN}
     volumes:
       - type: bind
         source: ./entrypoint.sh
@@ -51,8 +51,8 @@ services:
           # and pass them as arguments to the odoo process if not present in the config file
           : ${HOST:=${DB_PORT_5432_TCP_ADDR:='db'}}
           : ${PORT:=${DB_PORT_5432_TCP_PORT:=5432}}
-          : ${USER:=${DB_ENV_POSTGRES_USER:=${POSTGRES_USER:=${SERVICE_USER_POSTGRES:-'odoo'}}}}
-          : ${PASSWORD:=${DB_ENV_POSTGRES_PASSWORD:=${POSTGRES_PASSWORD:=${SERVICE_SPECIFIC_PASSWORD:-${SERVICE_PASSWORD_POSTGRES}}}}}
+          : ${USER:=${DB_ENV_POSTGRES_USER:=${POSTGRES_USER:=${SERVICE_USER_DB}}}}
+          : ${PASSWORD:=${DB_ENV_POSTGRES_PASSWORD:=${POSTGRES_PASSWORD:=${SERVICE_PASSWORD_DB}}}}
           
           # Update Odoo config with admin password
           if [ -n "$ADMIN_PASSWORD" ]; then
@@ -116,7 +116,7 @@ services:
           [options]
           addons_path = /mnt/extra-addons
           data_dir = /etc/odoo
-          admin_passwd = ${SERVICE_SPECIFIC_PASSWORD_ADMIN:-${SERVICE_PASSWORD_ODOO}}
+          admin_passwd = ${SERVICE_PASSWORD_ADMIN}
       - type: bind
         source: ./etc/requirements.txt
         target: /etc/odoo/requirements.txt
@@ -177,8 +177,6 @@ services:
           XlsxWriter==3.0.2
           xlwt==1.3.*
           zeep==4.1.0
-
-          # Additional Python Packages
           pycryptodome==3.20.0
           paramiko==2.12.0
     restart: always             # run as a service
