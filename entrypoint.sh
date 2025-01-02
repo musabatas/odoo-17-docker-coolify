@@ -10,8 +10,8 @@ set -e
 : ${PASSWORD:=${DB_ENV_POSTGRES_PASSWORD:=${POSTGRES_PASSWORD:=${SERVICE_PASSWORD_POSTGRES}}}}
 
 # install build-essential python3-dev libldap2-dev libsasl2-dev libssl-dev
-sudo apt update
-sudo apt install build-essential python3-dev libldap2-dev libsasl2-dev libssl-dev
+apt update
+apt install build-essential python3-dev libldap2-dev libsasl2-dev libssl-dev
 
 # install python packages
 pip3 install pip --upgrade
