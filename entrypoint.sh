@@ -4,14 +4,15 @@ set -e
 
 # set the postgres database host, port, user and password according to the environment
 # and pass them as arguments to the odoo process if not present in the config file
-: ${HOST:=${DB_PORT_5432_TCP_ADDR:='odoo-db'}}
+: ${HOST:=${DB_PORT_5432_TCP_ADDR:='db'}}
 : ${PORT:=${DB_PORT_5432_TCP_PORT:=5432}}
-: ${USER:=${DB_ENV_POSTGRES_USER:=${POSTGRES_USER:=${SERVICE_USER_POSTGRES}}}}
-: ${PASSWORD:=${DB_ENV_POSTGRES_PASSWORD:=${POSTGRES_PASSWORD:=${SERVICE_PASSWORD_POSTGRES}}}}
+: ${USER:=${DB_ENV_POSTGRES_USER:=${POSTGRES_USER:=${SERVICE_USER_POSTGRES:-'odoo'}}}}
+: ${PASSWORD:=${DB_ENV_POSTGRES_PASSWORD:=${POSTGRES_PASSWORD:=${SERVICE_PASSWORD_POSTGRES:-'odoo17@2023'}}}}
 
-# install build-essential python3-dev libldap2-dev libsasl2-dev libssl-dev
-apt update
-apt install build-essential python3-dev libldap2-dev libsasl2-dev libssl-dev
+# Update Odoo config with admin password
+if [ -n "$ADMIN_PASSWORD" ]; then
+    sed -i "s/admin_passwd = .*/admin_passwd = $ADMIN_PASSWORD/" /etc/odoo/odoo.conf
+fi
 
 # install python packages
 pip3 install pip --upgrade
