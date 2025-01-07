@@ -7,6 +7,8 @@ services:
       - POSTGRES_USER=odoo
       - POSTGRES_PASSWORD=te1uwNusH6QkPAIyXa
       - POSTGRES_DB=postgres
+    ports: 
+      - "54108:5432"
     restart: always             # run as a service
     volumes:
       - type: bind
