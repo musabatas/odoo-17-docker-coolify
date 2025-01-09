@@ -17,13 +17,13 @@ services:
         is_directory: true    # Coolify will create this directory
 
   odoo17:
-    image: odoo:17
+    image: odoo:18
     user: root
     depends_on:
       - db
     ports:
-      - "10017:8069"
-      - "20017:8072" # live chat
+      - "${EXPOSE_PORT}:5432"
+      - "${LIVECHAT_EXPOSE_PORT}:8072" # live chat
     tty: true
     command: --
     environment:
