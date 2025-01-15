@@ -36,6 +36,10 @@ services:
         target: /mnt/extra-addons
         is_directory: true    # Coolify will create this directory
       - type: bind
+        source: ./enterprise-addons
+        target: /mnt/enterprise-addons
+        is_directory: true
+      - type: bind
         source: ./etc
         target: /etc/odoo
         is_directory: true    # Coolify will create this directory
