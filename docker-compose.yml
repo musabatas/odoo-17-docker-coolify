@@ -48,7 +48,7 @@ services:
         target: /etc/odoo/odoo.conf
         content: |
           [options]
-          addons_path = /mnt/extra-addons,/mnt/enterprise-addons
+          addons_path = /mnt/extra-addons
           data_dir = /etc/odoo
           admin_passwd = 1ALxKjvgTETvpJL3gL
           logfile = /etc/odoo/odoo-server.log
