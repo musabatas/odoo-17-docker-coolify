@@ -26,6 +26,16 @@ services:
       - "20017:8072" # live chat
     tty: true
     command: --
+    labels:
+      - coolify.managed=true
+      - traefik.enable=true
+      - traefik.http.middlewares.gzip.compress=true
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.routers.http-odoo17.middlewares=redirect-to-https
+      - traefik.http.routers.https-odoo17.entryPoints=https
+      - traefik.http.routers.https-odoo17.middlewares=gzip
+      - traefik.http.routers.https-odoo17.tls.certresolver=letsencrypt
+      - traefik.http.routers.https-odoo17.tls=true
     environment:
       - HOST=db
       - USER=odoo
